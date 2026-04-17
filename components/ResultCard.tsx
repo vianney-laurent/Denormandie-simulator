@@ -40,7 +40,6 @@ export default function ResultCard({ results, inputs }: Props) {
     rentCeiling,
     maxMonthlyRent,
     grossYield,
-    netSavingsEffort,
   } = results;
 
   return (
@@ -97,39 +96,23 @@ export default function ResultCard({ results, inputs }: Props) {
           <Row label="Rendement brut" value={`${grossYield.toFixed(2)} %`} />
         </Section>
 
-        {/* Effort d'épargne net */}
-        <div className="px-6 py-4">
-          <div
-            className={`rounded-xl px-4 py-4 ${
-              netSavingsEffort <= 0 ? 'bg-green-50 border border-green-200' : 'bg-amber-50 border border-amber-200'
-            }`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <span
-                className={`text-sm font-semibold ${
-                  netSavingsEffort <= 0 ? 'text-green-800' : 'text-amber-800'
-                }`}
-              >
-                Effort d'épargne mensuel net
-              </span>
-              <span
-                className={`text-xl font-bold tabular-nums ${
-                  netSavingsEffort <= 0 ? 'text-green-700' : 'text-amber-700'
-                }`}
-              >
-                {netSavingsEffort > 0 ? '+' : ''}
-                {fmt(netSavingsEffort)}
-              </span>
-            </div>
-            <p
-              className={`text-xs mt-2 leading-relaxed ${
-                netSavingsEffort <= 0 ? 'text-green-600' : 'text-amber-600'
-              }`}
-            >
-              Mensualité {fmt(monthlyPayment)} − Loyer {fmt(maxMonthlyRent)} − Économie fiscale{' '}
-              {fmt(monthlyReduction)}
-            </p>
-          </div>
+        {/* Cash-flow */}
+        <div className="px-6 py-4 space-y-3">
+          <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+            Cash-flow mensuel
+          </h3>
+          <CashFlowBlock
+            label="Sans crédit d'impôt"
+            sublabel="Effort immédiat chaque mois"
+            value={maxMonthlyRent - monthlyPayment}
+            formula={`Loyer ${fmt(maxMonthlyRent)} − Mensualité ${fmt(monthlyPayment)}`}
+          />
+          <CashFlowBlock
+            label="Avec crédit d'impôt"
+            sublabel={`Réduction lissée sur le mois (${fmt(monthlyReduction)}/mois)`}
+            value={maxMonthlyRent - monthlyPayment + monthlyReduction}
+            formula={`Loyer ${fmt(maxMonthlyRent)} − Mensualité ${fmt(monthlyPayment)} + Fiscal ${fmt(monthlyReduction)}`}
+          />
         </div>
       </div>
     </div>
@@ -141,6 +124,50 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="px-6 py-4">
       <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">{title}</h3>
       <div className="space-y-1.5">{children}</div>
+    </div>
+  );
+}
+
+function CashFlowBlock({
+  label,
+  sublabel,
+  value,
+  formula,
+}: {
+  label: string;
+  sublabel: string;
+  value: number;
+  formula: string;
+}) {
+  const positive = value >= 0;
+  return (
+    <div
+      className={`rounded-xl border px-4 py-3 ${
+        positive ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className={`text-sm font-semibold ${positive ? 'text-green-800' : 'text-red-800'}`}>
+            {label}
+          </p>
+          <p className={`text-xs mt-0.5 ${positive ? 'text-green-600' : 'text-red-500'}`}>
+            {sublabel}
+          </p>
+        </div>
+        <span
+          className={`text-xl font-bold tabular-nums whitespace-nowrap ${
+            positive ? 'text-green-700' : 'text-red-600'
+          }`}
+        >
+          {positive ? '+' : ''}
+          {fmt(value)}
+          <span className={`text-xs font-normal ml-1 ${positive ? 'text-green-600' : 'text-red-500'}`}>
+            /mois
+          </span>
+        </span>
+      </div>
+      <p className={`text-xs mt-2 ${positive ? 'text-green-600' : 'text-red-400'}`}>{formula}</p>
     </div>
   );
 }
