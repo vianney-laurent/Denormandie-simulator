@@ -57,6 +57,10 @@ engagementDuration: 9 ans
 manualZone: B2
 ```
 
+## Règle de contribution
+
+**Avant tout `git push`, `npm run build` doit passer sans erreur en local.** Ne jamais pousser du code qui ne compile pas.
+
 ## Déploiement Vercel
 
 Importer le repo directement — `package.json` est à la racine, aucune config Root Directory nécessaire.
