@@ -1,11 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import CitySearch from '@/components/CitySearch';
 import ResultCard from '@/components/ResultCard';
 import ThemeToggle from '@/components/ThemeToggle';
 import { SimulatorInputs, Zone, City } from '@/lib/types';
 import { calculate } from '@/lib/calculations';
+
+// Plafond initial pour B2 / 60 m² (coeff 1.0167 → ~600 €/mois)
+const INITIAL_RENT = Math.round(60 * 9.83 * Math.min(0.7 + 19 / 60, 1.2));
 
 const DEFAULTS: SimulatorInputs = {
   surface: 60,
@@ -17,6 +20,7 @@ const DEFAULTS: SimulatorInputs = {
   loanDuration: 20,
   engagementDuration: 9,
   manualZone: 'B2',
+  customRentMonthly: INITIAL_RENT,
 };
 
 export default function Home() {
@@ -25,13 +29,25 @@ export default function Home() {
 
   const results = useMemo(() => calculate(inputs), [inputs]);
 
-  // undefined = pas de ville choisie ; null = ville choisie sans données ; number = données dispo
+  // Clamp le loyer simulé si le plafond baisse (changement de zone ou de surface)
+  useEffect(() => {
+    if (inputs.customRentMonthly > results.maxMonthlyRent) {
+      setInputs(prev => ({
+        ...prev,
+        customRentMonthly: Math.round(results.maxMonthlyRent),
+      }));
+    }
+  }, [results.maxMonthlyRent]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // marketRent : undefined = pas de ville, null = ville sans données, number = données dispo
   const marketRent: number | null | undefined =
-    selectedCity === undefined
-      ? undefined
-      : selectedCity === null
-      ? null
-      : (selectedCity.marketRent ?? null);
+    selectedCity === undefined ? undefined :
+    selectedCity === null      ? null :
+    (selectedCity.marketRent ?? null);
+
+  // Loyer mensuel estimé selon les données de marché (pour les marqueurs du slider)
+  const marketMonthlyRent =
+    typeof marketRent === 'number' ? marketRent * inputs.surface : null;
 
   function setNum(field: keyof SimulatorInputs, raw: string) {
     const value = parseFloat(raw);
@@ -42,6 +58,26 @@ export default function Home() {
     const value = parseInt(raw, 10);
     if (!isNaN(value)) setInputs(prev => ({ ...prev, [field]: value }));
   }
+
+  function handleCitySelect(city: City | null) {
+    setSelectedCity(city);
+    if (city?.marketRent) {
+      // Positionne le slider sur le loyer de marché estimé (sans coeff — données brutes)
+      const marketTotal = city.marketRent * inputs.surface;
+      setInputs(prev => ({
+        ...prev,
+        customRentMonthly: Math.min(Math.round(marketTotal), Math.round(results.maxMonthlyRent)),
+      }));
+    }
+  }
+
+  const sliderMax = Math.round(results.maxMonthlyRent);
+  const sliderValue = Math.min(inputs.customRentMonthly, sliderMax);
+  const rentPerSqm = inputs.surface > 0 ? sliderValue / inputs.surface : 0;
+  const marketPct  =
+    marketMonthlyRent && sliderMax > 0
+      ? Math.min((marketMonthlyRent / sliderMax) * 100, 96)
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -151,7 +187,7 @@ export default function Home() {
                 <CitySearch
                   zone={inputs.manualZone}
                   onZoneChange={(z: Zone) => setInputs(prev => ({ ...prev, manualZone: z }))}
-                  onCitySelect={(city: City | null) => setSelectedCity(city ?? null)}
+                  onCitySelect={handleCitySelect}
                 />
               </div>
               <div>
@@ -174,12 +210,77 @@ export default function Home() {
                   ))}
                 </div>
               </div>
+
+              {/* Slider loyer */}
+              <div className="pt-1 space-y-2">
+                <div className="flex items-baseline justify-between gap-2">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Loyer mensuel simulé
+                  </label>
+                  <div className="text-right tabular-nums shrink-0">
+                    <span className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                      {fmt(sliderValue)}
+                    </span>
+                    <span className="text-sm text-slate-400 dark:text-slate-500 ml-1.5">
+                      {rentPerSqm.toFixed(1)} €/m²
+                    </span>
+                  </div>
+                </div>
+
+                <input
+                  type="range"
+                  min={0}
+                  max={sliderMax}
+                  step={5}
+                  value={sliderValue}
+                  onChange={e =>
+                    setInputs(prev => ({
+                      ...prev,
+                      customRentMonthly: parseFloat(e.target.value),
+                    }))
+                  }
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-slate-700"
+                />
+
+                {/* Marqueurs */}
+                <div className="relative h-5 select-none">
+                  <span className="absolute left-0 text-xs text-slate-400 dark:text-slate-500">
+                    0 €
+                  </span>
+                  {marketPct !== null && marketMonthlyRent !== null && (
+                    <span
+                      className="absolute text-xs font-medium text-blue-500 dark:text-blue-400 -translate-x-1/2 whitespace-nowrap"
+                      style={{ left: `${marketPct}%` }}
+                    >
+                      ↑ Marché ~{fmt(marketMonthlyRent)}
+                    </span>
+                  )}
+                  <span className="absolute right-0 text-xs text-slate-400 dark:text-slate-500 text-right whitespace-nowrap">
+                    Plafond {fmt(sliderMax)}
+                  </span>
+                </div>
+
+                {marketRent === undefined && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Sélectionnez une ville pour afficher le loyer de marché estimé.
+                  </p>
+                )}
+                {marketRent === null && (
+                  <p className="text-xs text-slate-400 dark:text-slate-500">
+                    Pas de données de marché disponibles pour cette ville.
+                  </p>
+                )}
+              </div>
             </Card>
           </div>
 
           {/* Résultats */}
           <div className="lg:sticky lg:top-8">
-            <ResultCard results={results} inputs={inputs} marketRent={marketRent} />
+            <ResultCard
+              results={results}
+              inputs={inputs}
+              marketRent={marketRent}
+            />
           </div>
         </div>
       </main>
@@ -193,6 +294,13 @@ export default function Home() {
     </div>
   );
 }
+
+const EUR = new Intl.NumberFormat('fr-FR', {
+  style: 'currency',
+  currency: 'EUR',
+  maximumFractionDigits: 0,
+});
+function fmt(n: number) { return EUR.format(n); }
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (

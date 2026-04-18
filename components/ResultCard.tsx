@@ -12,15 +12,11 @@ const EUR = new Intl.NumberFormat('fr-FR', {
   currency: 'EUR',
   maximumFractionDigits: 0,
 });
-
-function fmt(n: number) {
-  return EUR.format(n);
-}
+function fmt(n: number) { return EUR.format(n); }
 
 interface Props {
   results: SimulatorResults;
   inputs: SimulatorInputs;
-  // undefined = aucune ville sélectionnée ; null = ville sélectionnée sans données ; number = données disponibles
   marketRent: number | null | undefined;
 }
 
@@ -41,13 +37,17 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
     zone,
     rentCeiling,
     maxMonthlyRent,
+    simulatedRent,
     grossYield,
   } = results;
 
-  const coeff = Math.min(0.7 + 19 / inputs.surface, 1.2);
-  const effectiveCeilingPerSqm = rentCeiling * coeff;
-  const marketIsAboveCeiling =
-    typeof marketRent === 'number' && marketRent >= effectiveCeilingPerSqm;
+  const rentPerSqm = inputs.surface > 0 ? simulatedRent / inputs.surface : 0;
+  const marketMonthlyRent = typeof marketRent === 'number' ? marketRent * inputs.surface : null;
+
+  // Indicateur : le loyer simulé est-il supérieur au marché ?
+  const isAboveMarket =
+    marketMonthlyRent !== null && simulatedRent > marketMonthlyRent;
+  const isBelowCeiling = simulatedRent < maxMonthlyRent - 1;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -84,11 +84,11 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
 
         {/* Avantage fiscal */}
         <Section title="Avantage fiscal">
-          <Row label="Base éligible"        value={fmt(eligibleBase)} />
-          <Row label="Taux de réduction"    value={`${(reductionRate * 100).toFixed(0)} %`} />
-          <Row label="Réduction totale"     value={fmt(totalReduction)} bold />
-          <Row label="Réduction annuelle"   value={fmt(annualReduction)} />
-          <Row label="Réduction mensuelle"  value={fmt(monthlyReduction)} accent />
+          <Row label="Base éligible"       value={fmt(eligibleBase)} />
+          <Row label="Taux de réduction"   value={`${(reductionRate * 100).toFixed(0)} %`} />
+          <Row label="Réduction totale"    value={fmt(totalReduction)} bold />
+          <Row label="Réduction annuelle"  value={fmt(annualReduction)} />
+          <Row label="Réduction mensuelle" value={fmt(monthlyReduction)} accent />
         </Section>
 
         {/* Financement */}
@@ -100,44 +100,46 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
 
         {/* Rendement locatif */}
         <Section title="Rendement locatif">
-          <Row label={`Plafond ${ZONE_LABEL[zone]}`} value={`${rentCeiling} €/m²`} />
-          <Row label="Loyer mensuel max (plafond)"   value={fmt(maxMonthlyRent)} bold />
+          <Row label={`Plafond ${ZONE_LABEL[zone]}`}    value={`${rentCeiling} €/m²`} />
+          <Row label="Loyer plafond Denormandie"         value={fmt(maxMonthlyRent)} muted />
+          <Row
+            label="Loyer simulé"
+            value={`${fmt(simulatedRent)} · ${rentPerSqm.toFixed(1)} €/m²`}
+            bold
+          />
           {typeof marketRent === 'number' && (
-            <Row
-              label="Loyer marché estimé"
-              value={`~${marketRent} €/m²`}
-              muted
-            />
+            <Row label="Loyer marché estimé" value={`~${marketRent} €/m²`} muted />
           )}
           <Row label="Rendement brut" value={`${grossYield.toFixed(2)} %`} />
-          {/* Indicateur conservateur / optimiste */}
+
+          {/* Badge marché */}
           {typeof marketRent === 'number' ? (
             <div
               className={`mt-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                marketIsAboveCeiling
-                  ? 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
-                  : 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                isAboveMarket
+                  ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                  : 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
               }`}
             >
-              {marketIsAboveCeiling ? (
+              {isAboveMarket ? (
                 <>
-                  <span className="font-semibold">✓ Simulation conservatrice</span>
-                  {' '}— Le marché ({marketRent} €/m²) est au-dessus du plafond Denormandie ({effectiveCeilingPerSqm.toFixed(1)} €/m²). Vous pouvez louer au plafond sans difficulté.
+                  <span className="font-semibold">⚠ Projection optimiste</span>
+                  {' '}— Loyer simulé ({fmt(simulatedRent)}) supérieur au marché estimé (~{fmt(marketMonthlyRent!)}).
+                  {isBelowCeiling && ` Vous pouvez baisser le slider pour tester un scénario prudent.`}
                 </>
               ) : (
                 <>
-                  <span className="font-semibold">⚠ Simulation optimiste</span>
-                  {' '}— Le marché ({marketRent} €/m²) est en dessous du plafond ({effectiveCeilingPerSqm.toFixed(1)} €/m²). Le loyer réel sera probablement{' '}
-                  {fmt(inputs.surface * marketRent * coeff)}/mois.
+                  <span className="font-semibold">✓ Projection conservatrice</span>
+                  {' '}— Loyer simulé ({fmt(simulatedRent)}) inférieur ou égal au marché estimé (~{fmt(marketMonthlyRent!)}).
                 </>
               )}
             </div>
           ) : marketRent === null ? (
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">
               Pas de données de marché disponibles pour cette ville.
             </p>
           ) : (
-            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">
               Sélectionnez une ville pour afficher le loyer de marché estimé.
             </p>
           )}
@@ -151,14 +153,14 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
           <CashFlowBlock
             label="Sans crédit d'impôt"
             sublabel="Effort immédiat chaque mois"
-            value={maxMonthlyRent - monthlyPayment}
-            formula={`Loyer ${fmt(maxMonthlyRent)} − Mensualité ${fmt(monthlyPayment)}`}
+            value={simulatedRent - monthlyPayment}
+            formula={`Loyer ${fmt(simulatedRent)} − Mensualité ${fmt(monthlyPayment)}`}
           />
           <CashFlowBlock
             label="Avec crédit d'impôt"
             sublabel={`Réduction lissée sur le mois (${fmt(monthlyReduction)}/mois)`}
-            value={maxMonthlyRent - monthlyPayment + monthlyReduction}
-            formula={`Loyer ${fmt(maxMonthlyRent)} − Mensualité ${fmt(monthlyPayment)} + Fiscal ${fmt(monthlyReduction)}`}
+            value={simulatedRent - monthlyPayment + monthlyReduction}
+            formula={`Loyer ${fmt(simulatedRent)} − Mensualité ${fmt(monthlyPayment)} + Fiscal ${fmt(monthlyReduction)}`}
           />
         </div>
       </div>
@@ -178,25 +180,17 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function CashFlowBlock({
-  label,
-  sublabel,
-  value,
-  formula,
+  label, sublabel, value, formula,
 }: {
-  label: string;
-  sublabel: string;
-  value: number;
-  formula: string;
+  label: string; sublabel: string; value: number; formula: string;
 }) {
   const positive = value >= 0;
   return (
-    <div
-      className={`rounded-xl border px-4 py-3 ${
-        positive
-          ? 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800'
-          : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800'
-      }`}
-    >
+    <div className={`rounded-xl border px-4 py-3 ${
+      positive
+        ? 'bg-green-50 dark:bg-green-950/40 border-green-200 dark:border-green-800'
+        : 'bg-red-50 dark:bg-red-950/40 border-red-200 dark:border-red-800'
+    }`}>
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className={`text-sm font-semibold ${positive ? 'text-green-800 dark:text-green-300' : 'text-red-800 dark:text-red-300'}`}>
@@ -207,8 +201,7 @@ function CashFlowBlock({
           </p>
         </div>
         <span className={`text-xl font-bold tabular-nums whitespace-nowrap ${positive ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-          {positive ? '+' : ''}
-          {fmt(value)}
+          {positive ? '+' : ''}{fmt(value)}
           <span className={`text-xs font-normal ml-1 ${positive ? 'text-green-600 dark:text-green-500' : 'text-red-500 dark:text-red-500'}`}>
             /mois
           </span>
@@ -222,32 +215,19 @@ function CashFlowBlock({
 }
 
 function Row({
-  label,
-  value,
-  bold,
-  accent,
-  muted,
+  label, value, bold, accent, muted,
 }: {
-  label: string;
-  value: string;
-  bold?: boolean;
-  accent?: boolean;
-  muted?: boolean;
+  label: string; value: string; bold?: boolean; accent?: boolean; muted?: boolean;
 }) {
   return (
     <div className="flex items-center justify-between text-sm">
       <span className="text-slate-600 dark:text-slate-400">{label}</span>
-      <span
-        className={`tabular-nums ${
-          bold
-            ? 'font-semibold text-slate-900 dark:text-slate-100'
-            : accent
-            ? 'font-semibold text-blue-600 dark:text-blue-400'
-            : muted
-            ? 'text-slate-400 dark:text-slate-500'
-            : 'text-slate-700 dark:text-slate-300'
-        }`}
-      >
+      <span className={`tabular-nums ${
+        bold   ? 'font-semibold text-slate-900 dark:text-slate-100' :
+        accent ? 'font-semibold text-blue-600 dark:text-blue-400'  :
+        muted  ? 'text-slate-400 dark:text-slate-500'              :
+                 'text-slate-700 dark:text-slate-300'
+      }`}>
         {value}
       </span>
     </div>

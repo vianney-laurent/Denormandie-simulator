@@ -1,15 +1,15 @@
 import { SimulatorInputs, SimulatorResults, Zone } from './types';
 
-const RENT_CEILINGS: Record<Zone, number> = {
+export const RENT_CEILINGS: Record<Zone, number> = {
   'A bis': 18.89,
-  'A': 14.03,
-  'B1': 11.31,
-  'B2': 9.83,
+  'A':     14.03,
+  'B1':    11.31,
+  'B2':     9.83,
 };
 
 const REDUCTION_RATES: Record<number, number> = {
-  6: 0.12,
-  9: 0.18,
+  6:  0.12,
+  9:  0.18,
   12: 0.21,
 };
 
@@ -24,18 +24,19 @@ export function calculate(inputs: SimulatorInputs): SimulatorResults {
     loanDuration,
     engagementDuration,
     manualZone,
+    customRentMonthly,
   } = inputs;
 
   const notaryFees = price * (notaryFeeRate / 100);
-  const totalCost = price + renovationCost + notaryFees;
+  const totalCost  = price + renovationCost + notaryFees;
 
   const renovationSharePercent = totalCost > 0 ? (renovationCost / totalCost) * 100 : 0;
-  const renovationCompliant = renovationSharePercent >= 25;
+  const renovationCompliant    = renovationSharePercent >= 25;
 
-  const eligibleBase = Math.min(totalCost, 300_000, 5_500 * surface);
+  const eligibleBase  = Math.min(totalCost, 300_000, 5_500 * surface);
   const reductionRate = REDUCTION_RATES[engagementDuration] ?? 0.18;
-  const totalReduction = eligibleBase * reductionRate;
-  const annualReduction = totalReduction / engagementDuration;
+  const totalReduction   = eligibleBase * reductionRate;
+  const annualReduction  = totalReduction / engagementDuration;
   const monthlyReduction = annualReduction / 12;
 
   const loanAmount = Math.max(0, totalCost - personalContribution);
@@ -43,21 +44,22 @@ export function calculate(inputs: SimulatorInputs): SimulatorResults {
   if (loanAmount > 0 && loanDuration > 0) {
     const monthlyRate = interestRate / 100 / 12;
     const n = loanDuration * 12;
-    if (monthlyRate === 0) {
-      monthlyPayment = loanAmount / n;
-    } else {
-      monthlyPayment = (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n));
-    }
+    monthlyPayment =
+      monthlyRate === 0
+        ? loanAmount / n
+        : (loanAmount * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -n));
   }
   const totalCreditCost = monthlyPayment * loanDuration * 12 - loanAmount;
 
-  const zone = manualZone;
+  const zone       = manualZone;
   const rentCeiling = RENT_CEILINGS[zone];
-  const coeff = Math.min(0.7 + 19 / surface, 1.2);
+  const coeff      = Math.min(0.7 + 19 / surface, 1.2);
   const maxMonthlyRent = surface * rentCeiling * coeff;
-  const grossYield = totalCost > 0 ? (maxMonthlyRent * 12 / totalCost) * 100 : 0;
 
-  const netSavingsEffort = monthlyPayment - maxMonthlyRent - monthlyReduction;
+  // Le loyer effectivement utilisé dans la simulation, plafonné au max légal
+  const simulatedRent  = Math.min(customRentMonthly, maxMonthlyRent);
+  const grossYield     = totalCost > 0 ? (simulatedRent * 12 / totalCost) * 100 : 0;
+  const netSavingsEffort = monthlyPayment - simulatedRent - monthlyReduction;
 
   return {
     notaryFees,
@@ -75,6 +77,7 @@ export function calculate(inputs: SimulatorInputs): SimulatorResults {
     zone,
     rentCeiling,
     maxMonthlyRent,
+    simulatedRent,
     grossYield,
     netSavingsEffort,
   };

@@ -16,6 +16,7 @@ export interface SimulatorInputs {
   loanDuration: number;
   engagementDuration: 6 | 9 | 12;
   manualZone: Zone;
+  customRentMonthly: number;
 }
 
 export interface SimulatorResults {
@@ -34,6 +35,7 @@ export interface SimulatorResults {
   zone: Zone;
   rentCeiling: number;
   maxMonthlyRent: number;
+  simulatedRent: number;
   grossYield: number;
   netSavingsEffort: number;
 }
