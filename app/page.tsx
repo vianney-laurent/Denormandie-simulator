@@ -74,11 +74,6 @@ export default function Home() {
   const sliderMax = Math.round(results.maxMonthlyRent);
   const sliderValue = Math.min(inputs.customRentMonthly, sliderMax);
   const rentPerSqm = inputs.surface > 0 ? sliderValue / inputs.surface : 0;
-  const marketPct  =
-    marketMonthlyRent && sliderMax > 0
-      ? Math.min((marketMonthlyRent / sliderMax) * 100, 96)
-      : null;
-
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="bg-blue-700 shadow-md">
@@ -242,30 +237,24 @@ export default function Home() {
                   className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-slate-700"
                 />
 
-                {/* Marqueurs */}
-                <div className="relative h-5 select-none">
-                  <span className="absolute left-0 text-xs text-slate-400 dark:text-slate-500">
-                    0 €
-                  </span>
-                  {marketPct !== null && marketMonthlyRent !== null && (
-                    <span
-                      className="absolute text-xs font-medium text-blue-500 dark:text-blue-400 -translate-x-1/2 whitespace-nowrap"
-                      style={{ left: `${marketPct}%` }}
-                    >
-                      ↑ Marché ~{fmt(marketMonthlyRent)}
-                    </span>
-                  )}
-                  <span className="absolute right-0 text-xs text-slate-400 dark:text-slate-500 text-right whitespace-nowrap">
+                {/* Bornes du slider */}
+                <div className="flex justify-between select-none">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">0 €</span>
+                  <span className="text-xs text-slate-400 dark:text-slate-500">
                     Plafond {fmt(sliderMax)}
                   </span>
                 </div>
 
-                {marketRent === undefined && (
+                {/* Référence marché sous le slider */}
+                {typeof marketRent === 'number' && marketMonthlyRent !== null ? (
+                  <p className="text-xs text-blue-500 dark:text-blue-400">
+                    Référence marché : ~{fmt(marketMonthlyRent)}/mois · {marketRent} €/m²
+                  </p>
+                ) : marketRent === undefined ? (
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     Sélectionnez une ville pour afficher le loyer de marché estimé.
                   </p>
-                )}
-                {marketRent === null && (
+                ) : (
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     Pas de données de marché disponibles pour cette ville.
                   </p>
