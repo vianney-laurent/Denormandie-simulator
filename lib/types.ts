@@ -3,6 +3,7 @@ export type Zone = 'A bis' | 'A' | 'B1' | 'B2';
 export interface City {
   name: string;
   zone: Zone;
+  marketRent?: number;
 }
 
 export interface SimulatorInputs {

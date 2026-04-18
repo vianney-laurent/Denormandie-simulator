@@ -3,7 +3,8 @@
 import { useState, useMemo } from 'react';
 import CitySearch from '@/components/CitySearch';
 import ResultCard from '@/components/ResultCard';
-import { SimulatorInputs, Zone } from '@/lib/types';
+import ThemeToggle from '@/components/ThemeToggle';
+import { SimulatorInputs, Zone, City } from '@/lib/types';
 import { calculate } from '@/lib/calculations';
 
 const DEFAULTS: SimulatorInputs = {
@@ -20,8 +21,17 @@ const DEFAULTS: SimulatorInputs = {
 
 export default function Home() {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULTS);
+  const [selectedCity, setSelectedCity] = useState<City | null | undefined>(undefined);
 
   const results = useMemo(() => calculate(inputs), [inputs]);
+
+  // undefined = pas de ville choisie ; null = ville choisie sans données ; number = données dispo
+  const marketRent: number | null | undefined =
+    selectedCity === undefined
+      ? undefined
+      : selectedCity === null
+      ? null
+      : (selectedCity.marketRent ?? null);
 
   function setNum(field: keyof SimulatorInputs, raw: string) {
     const value = parseFloat(raw);
@@ -34,13 +44,16 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
       <header className="bg-blue-700 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
-          <h1 className="text-2xl font-bold text-white tracking-tight">Simulateur Denormandie</h1>
-          <p className="text-blue-200 mt-1 text-sm">
-            Estimez votre investissement locatif avec rénovation et calculez votre avantage fiscal
-          </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white tracking-tight">Simulateur Denormandie</h1>
+            <p className="text-blue-200 mt-1 text-sm">
+              Estimez votre investissement locatif avec rénovation et calculez votre avantage fiscal
+            </p>
+          </div>
+          <ThemeToggle />
         </div>
       </header>
 
@@ -132,14 +145,17 @@ export default function Home() {
             {/* Dispositif */}
             <Card title="Dispositif Denormandie">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">Ville</label>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Ville
+                </label>
                 <CitySearch
                   zone={inputs.manualZone}
                   onZoneChange={(z: Zone) => setInputs(prev => ({ ...prev, manualZone: z }))}
+                  onCitySelect={(city: City | null) => setSelectedCity(city ?? null)}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Durée d'engagement
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -150,7 +166,7 @@ export default function Home() {
                       className={`py-2 rounded-lg text-sm font-semibold border transition-colors ${
                         inputs.engagementDuration === d
                           ? 'bg-blue-600 text-white border-blue-600'
-                          : 'bg-white text-slate-700 border-slate-300 hover:border-blue-400'
+                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-600 hover:border-blue-400 dark:hover:border-blue-500'
                       }`}
                     >
                       {d} ans — {d === 6 ? '12 %' : d === 9 ? '18 %' : '21 %'}
@@ -163,15 +179,15 @@ export default function Home() {
 
           {/* Résultats */}
           <div className="lg:sticky lg:top-8">
-            <ResultCard results={results} inputs={inputs} />
+            <ResultCard results={results} inputs={inputs} marketRent={marketRent} />
           </div>
         </div>
       </main>
 
-      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-6 mt-4 border-t border-slate-200">
-        <p className="text-xs text-slate-400 text-center">
-          Simulation indicative. Plafonds de loyer 2024. Consultez un conseiller fiscal pour valider votre
-          investissement.
+      <footer className="max-w-7xl mx-auto px-4 sm:px-6 py-6 mt-4 border-t border-slate-200 dark:border-slate-800">
+        <p className="text-xs text-slate-400 dark:text-slate-600 text-center">
+          Simulation indicative. Plafonds de loyer 2024. Données de marché : estimation CLAMEUR / SeLoger 2024.
+          Consultez un conseiller fiscal pour valider votre investissement.
         </p>
       </footer>
     </div>
@@ -180,27 +196,19 @@ export default function Home() {
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
-      <h2 className="text-base font-semibold text-slate-900">{title}</h2>
+    <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+      <h2 className="text-base font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
       {children}
     </div>
   );
 }
 
-function Field({
-  label,
-  unit,
-  children,
-}: {
-  label: string;
-  unit: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, unit, children }: { label: string; unit: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-slate-700 mb-1">
+      <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
         {label}{' '}
-        <span className="font-normal text-slate-400">({unit})</span>
+        <span className="font-normal text-slate-400 dark:text-slate-500">({unit})</span>
       </label>
       {children}
     </div>
