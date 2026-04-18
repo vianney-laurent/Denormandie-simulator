@@ -38,16 +38,20 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
     rentCeiling,
     maxMonthlyRent,
     simulatedRent,
+    effectiveRent,
+    borrowerInsuranceMonthly,
+    propertyTaxMonthly,
+    pnoInsuranceMonthly,
+    managementFeesMonthly,
+    totalMonthlyExpenses,
     grossYield,
+    netYield,
   } = results;
 
   const rentPerSqm = inputs.surface > 0 ? simulatedRent / inputs.surface : 0;
   const marketMonthlyRent = typeof marketRent === 'number' ? marketRent * inputs.surface : null;
-
-  // Indicateur : le loyer simulé est-il supérieur au marché ?
   const isAboveMarket =
     marketMonthlyRent !== null && simulatedRent > marketMonthlyRent;
-  const isBelowCeiling = simulatedRent < maxMonthlyRent - 1;
 
   return (
     <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -59,25 +63,20 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
       </div>
 
       <div className="divide-y divide-slate-100 dark:divide-slate-800">
+
         {/* Coût total */}
         <Section title="Coût total de l'opération">
           <Row label="Prix d'achat"     value={fmt(inputs.price)} />
           <Row label="Travaux"          value={fmt(inputs.renovationCost)} />
           <Row label="Frais de notaire" value={fmt(notaryFees)} />
           <Row label="Coût total"       value={fmt(totalCost)} bold />
-          <div
-            className={`flex items-start justify-between text-sm pt-1 ${
-              renovationCompliant
-                ? 'text-green-700 dark:text-green-400'
-                : 'text-red-600 dark:text-red-400'
-            }`}
-          >
+          <div className={`flex items-start justify-between text-sm pt-1 ${
+            renovationCompliant ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+          }`}>
             <span>Quote-part travaux</span>
             <div className="text-right">
               <span className="font-medium">{renovationSharePercent.toFixed(1)} %</span>
-              {!renovationCompliant && (
-                <p className="text-xs mt-0.5">⚠ Minimum 25 % requis</p>
-              )}
+              {!renovationCompliant && <p className="text-xs mt-0.5">⚠ Minimum 25 % requis</p>}
             </div>
           </div>
         </Section>
@@ -93,8 +92,16 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
 
         {/* Financement */}
         <Section title="Financement">
-          <Row label="Montant emprunté"     value={fmt(loanAmount)} />
-          <Row label="Mensualité"           value={fmt(monthlyPayment)} bold />
+          <Row label="Montant emprunté"         value={fmt(loanAmount)} />
+          <Row label="Mensualité (hors assurance)" value={fmt(monthlyPayment)} />
+          {borrowerInsuranceMonthly > 0 && (
+            <Row label="Assurance emprunteur" value={fmt(borrowerInsuranceMonthly)} />
+          )}
+          <Row
+            label="Mensualité totale"
+            value={fmt(monthlyPayment + borrowerInsuranceMonthly)}
+            bold
+          />
           <Row label="Coût total du crédit" value={fmt(totalCreditCost)} />
         </Section>
 
@@ -107,31 +114,31 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
             value={`${fmt(simulatedRent)} · ${rentPerSqm.toFixed(1)} €/m²`}
             bold
           />
+          {inputs.vacancyRate > 0 && (
+            <Row
+              label={`Loyer effectif (vacance ${inputs.vacancyRate} %)`}
+              value={fmt(effectiveRent)}
+              muted
+            />
+          )}
           {typeof marketRent === 'number' && (
             <Row label="Loyer marché estimé" value={`~${marketRent} €/m²`} muted />
           )}
-          <Row label="Rendement brut" value={`${grossYield.toFixed(2)} %`} />
+          <Row label="Rendement brut"        value={`${grossYield.toFixed(2)} %`} />
+          <Row label="Rendement net charges" value={`${netYield.toFixed(2)} %`} accent />
 
-          {/* Badge marché */}
           {typeof marketRent === 'number' ? (
-            <div
-              className={`mt-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${
-                isAboveMarket
-                  ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
-                  : 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
-              }`}
-            >
+            <div className={`mt-2 rounded-lg px-3 py-2 text-xs leading-relaxed ${
+              isAboveMarket
+                ? 'bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-400'
+                : 'bg-green-50 dark:bg-green-950/50 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400'
+            }`}>
               {isAboveMarket ? (
-                <>
-                  <span className="font-semibold">⚠ Projection optimiste</span>
-                  {' '}— Loyer simulé ({fmt(simulatedRent)}) supérieur au marché estimé (~{fmt(marketMonthlyRent!)}).
-                  {isBelowCeiling && ` Vous pouvez baisser le slider pour tester un scénario prudent.`}
-                </>
+                <><span className="font-semibold">⚠ Projection optimiste</span>{' '}
+                — Loyer simulé ({fmt(simulatedRent)}) supérieur au marché estimé (~{fmt(marketMonthlyRent!)}).</>
               ) : (
-                <>
-                  <span className="font-semibold">✓ Projection conservatrice</span>
-                  {' '}— Loyer simulé ({fmt(simulatedRent)}) inférieur ou égal au marché estimé (~{fmt(marketMonthlyRent!)}).
-                </>
+                <><span className="font-semibold">✓ Projection conservatrice</span>{' '}
+                — Loyer simulé ({fmt(simulatedRent)}) inférieur ou égal au marché estimé (~{fmt(marketMonthlyRent!)}).</>
               )}
             </div>
           ) : marketRent === null ? (
@@ -145,6 +152,28 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
           )}
         </Section>
 
+        {/* Charges mensuelles */}
+        <Section title="Charges mensuelles">
+          <Row label="Mensualité prêt + assurance" value={fmt(monthlyPayment + borrowerInsuranceMonthly)} />
+          {propertyTaxMonthly > 0 && (
+            <Row label="Taxe foncière (lissée)" value={fmt(propertyTaxMonthly)} />
+          )}
+          {inputs.condoCharges > 0 && (
+            <Row label="Charges copro" value={fmt(inputs.condoCharges)} />
+          )}
+          {pnoInsuranceMonthly > 0 && (
+            <Row label="Assurance PNO" value={fmt(pnoInsuranceMonthly)} />
+          )}
+          {managementFeesMonthly > 0 && (
+            <Row label="Frais de gestion" value={fmt(managementFeesMonthly)} />
+          )}
+          <Row label="Total décaissements" value={fmt(totalMonthlyExpenses)} bold />
+          <Row
+            label={inputs.vacancyRate > 0 ? `Loyer perçu (vacance ${inputs.vacancyRate} %)` : 'Loyer perçu'}
+            value={fmt(effectiveRent)}
+          />
+        </Section>
+
         {/* Cash-flow */}
         <div className="px-6 py-4 space-y-3">
           <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
@@ -152,17 +181,18 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
           </h3>
           <CashFlowBlock
             label="Sans crédit d'impôt"
-            sublabel="Effort immédiat chaque mois"
-            value={simulatedRent - monthlyPayment}
-            formula={`Loyer ${fmt(simulatedRent)} − Mensualité ${fmt(monthlyPayment)}`}
+            sublabel="Effort réel chaque mois (charges incluses)"
+            value={effectiveRent - totalMonthlyExpenses}
+            formula={`Loyer ${fmt(effectiveRent)} − Charges ${fmt(totalMonthlyExpenses)}`}
           />
           <CashFlowBlock
             label="Avec crédit d'impôt"
             sublabel={`Réduction lissée sur le mois (${fmt(monthlyReduction)}/mois)`}
-            value={simulatedRent - monthlyPayment + monthlyReduction}
-            formula={`Loyer ${fmt(simulatedRent)} − Mensualité ${fmt(monthlyPayment)} + Fiscal ${fmt(monthlyReduction)}`}
+            value={effectiveRent - totalMonthlyExpenses + monthlyReduction}
+            formula={`Loyer ${fmt(effectiveRent)} − Charges ${fmt(totalMonthlyExpenses)} + Fiscal ${fmt(monthlyReduction)}`}
           />
         </div>
+
       </div>
     </div>
   );
@@ -200,7 +230,9 @@ function CashFlowBlock({
             {sublabel}
           </p>
         </div>
-        <span className={`text-xl font-bold tabular-nums whitespace-nowrap ${positive ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+        <span className={`text-xl font-bold tabular-nums whitespace-nowrap ${
+          positive ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+        }`}>
           {positive ? '+' : ''}{fmt(value)}
           <span className={`text-xs font-normal ml-1 ${positive ? 'text-green-600 dark:text-green-500' : 'text-red-500 dark:text-red-500'}`}>
             /mois

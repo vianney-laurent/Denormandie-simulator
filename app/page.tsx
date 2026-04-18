@@ -21,6 +21,12 @@ const DEFAULTS: SimulatorInputs = {
   engagementDuration: 9,
   manualZone: 'B2',
   customRentMonthly: INITIAL_RENT,
+  borrowerInsuranceRate: 0.25,
+  vacancyRate: 5,
+  propertyTax: 800,
+  condoCharges: 50,
+  pnoInsurance: 120,
+  managementFeeRate: 0,
 };
 
 export default function Home() {
@@ -259,6 +265,98 @@ export default function Home() {
                     Pas de données de marché disponibles pour cette ville.
                   </p>
                 )}
+              </div>
+            </Card>
+
+            {/* Charges et gestion */}
+            <Card title="Charges et gestion">
+              <Field label="Assurance emprunteur" unit="% du capital / an">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={inputs.borrowerInsuranceRate}
+                    onChange={e => setNum('borrowerInsuranceRate', e.target.value)}
+                    className="input"
+                    min="0" max="2" step="0.05"
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    → {fmt(results.borrowerInsuranceMonthly)}/mois
+                  </span>
+                </div>
+              </Field>
+              <Field label="Vacance locative" unit="%">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={inputs.vacancyRate}
+                    onChange={e => setNum('vacancyRate', e.target.value)}
+                    className="input"
+                    min="0" max="50" step="0.5"
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    → −{fmt(results.simulatedRent * inputs.vacancyRate / 100)}/mois
+                  </span>
+                </div>
+              </Field>
+              <Field label="Taxe foncière" unit="€ / an">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={inputs.propertyTax}
+                    onChange={e => setNum('propertyTax', e.target.value)}
+                    className="input"
+                    min="0" step="50"
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    → {fmt(results.propertyTaxMonthly)}/mois
+                  </span>
+                </div>
+              </Field>
+              <Field label="Charges copro non récupérables" unit="€ / mois">
+                <input
+                  type="number"
+                  defaultValue={inputs.condoCharges}
+                  onChange={e => setNum('condoCharges', e.target.value)}
+                  className="input"
+                  min="0" step="10"
+                />
+              </Field>
+              <Field label="Assurance PNO" unit="€ / an">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={inputs.pnoInsurance}
+                    onChange={e => setNum('pnoInsurance', e.target.value)}
+                    className="input"
+                    min="0" step="10"
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    → {fmt(results.pnoInsuranceMonthly)}/mois
+                  </span>
+                </div>
+              </Field>
+              <Field label="Frais de gestion agence" unit="% du loyer">
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    defaultValue={inputs.managementFeeRate}
+                    onChange={e => setNum('managementFeeRate', e.target.value)}
+                    className="input"
+                    min="0" max="15" step="0.5"
+                  />
+                  <span className="text-xs text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    → {fmt(results.managementFeesMonthly)}/mois
+                  </span>
+                </div>
+              </Field>
+              {/* Récap charges */}
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  Total charges hors prêt
+                </span>
+                <span className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                  {fmt(results.totalMonthlyCharges + results.borrowerInsuranceMonthly)}/mois
+                </span>
               </div>
             </Card>
           </div>
