@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import CitySearch from '@/components/CitySearch';
 import ResultCard from '@/components/ResultCard';
 import ThemeToggle from '@/components/ThemeToggle';
@@ -32,6 +32,19 @@ const DEFAULTS: SimulatorInputs = {
 export default function Home() {
   const [inputs, setInputs] = useState<SimulatorInputs>(DEFAULTS);
   const [selectedCity, setSelectedCity] = useState<City | null | undefined>(undefined);
+  const resultRef = useRef<HTMLDivElement>(null);
+  const [resultVisible, setResultVisible] = useState(false);
+
+  useEffect(() => {
+    const el = resultRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setResultVisible(entry.isIntersecting),
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   const results = useMemo(() => calculate(inputs), [inputs]);
 
@@ -94,7 +107,7 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-8 pb-28 lg:pb-8">
         <div className="grid lg:grid-cols-2 gap-8 items-start">
           {/* Formulaire */}
           <div className="space-y-6">
@@ -362,7 +375,7 @@ export default function Home() {
           </div>
 
           {/* Résultats */}
-          <div className="lg:sticky lg:top-8">
+          <div ref={resultRef} className="lg:sticky lg:top-8">
             <ResultCard
               results={results}
               inputs={inputs}
@@ -378,6 +391,48 @@ export default function Home() {
           Consultez un conseiller fiscal pour valider votre investissement.
         </p>
       </footer>
+      {/* Barre fixe cash-flow */}
+      <div
+        className={`fixed bottom-0 inset-x-0 z-50 transition-transform duration-300 ease-in-out ${
+          resultVisible ? 'translate-y-full' : 'translate-y-0'
+        }`}
+        aria-hidden={resultVisible}
+      >
+        <div className="bg-white/90 dark:bg-slate-900/90 backdrop-blur border-t border-slate-200 dark:border-slate-700 shadow-lg">
+          <div
+            className="max-w-7xl mx-auto px-4 sm:px-6 py-3 grid grid-cols-2 gap-3"
+            style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}
+          >
+            <MiniCashFlow
+              label="Sans crédit d'impôt"
+              value={results.effectiveRent - results.totalMonthlyExpenses}
+            />
+            <MiniCashFlow
+              label="Avec crédit d'impôt"
+              value={results.effectiveRent - results.totalMonthlyExpenses + results.monthlyReduction}
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniCashFlow({ label, value }: { label: string; value: number }) {
+  const positive = value >= 0;
+  return (
+    <div className={`rounded-lg px-3 py-2 ${
+      positive
+        ? 'bg-green-50 dark:bg-green-950/60 border border-green-200 dark:border-green-800'
+        : 'bg-red-50 dark:bg-red-950/60 border border-red-200 dark:border-red-800'
+    }`}>
+      <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5 truncate">{label}</p>
+      <p className={`text-lg font-bold tabular-nums ${
+        positive ? 'text-green-700 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+      }`}>
+        {positive ? '+' : ''}{fmt(value)}
+        <span className="text-xs font-normal ml-1 text-current opacity-70">/mois</span>
+      </p>
     </div>
   );
 }
