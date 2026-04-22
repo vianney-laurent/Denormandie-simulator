@@ -53,4 +53,12 @@ export interface SimulatorResults {
   grossYield: number;
   netYield: number;
   netSavingsEffort: number;
+  breakEvenEffectiveRentWithoutTax: number;
+  breakEvenEffectiveRentWithTax: number;
+  breakEvenDisplayedRentWithoutTax: number;
+  breakEvenDisplayedRentWithTax: number;
+  rentSafetyMarginWithTax: number; // % de marge entre loyer simulé et point mort (avec fiscalité)
+  stressVacancyRate: number;
+  stressEffectiveRent: number;
+  stressNetSavingsEffortWithTax: number;
 }

@@ -83,6 +83,20 @@ export function calculate(inputs: SimulatorInputs): SimulatorResults {
   const netYield = totalCost > 0 ? (netAnnualIncome / totalCost) * 100 : 0;
 
   const netSavingsEffort = totalMonthlyExpenses - effectiveRent - monthlyReduction;
+  const vacancyFactor = Math.max(0, 1 - vacancyRate / 100);
+  const breakEvenEffectiveRentWithoutTax = totalMonthlyExpenses;
+  const breakEvenEffectiveRentWithTax = Math.max(0, totalMonthlyExpenses - monthlyReduction);
+  const breakEvenDisplayedRentWithoutTax =
+    vacancyFactor > 0 ? breakEvenEffectiveRentWithoutTax / vacancyFactor : 0;
+  const breakEvenDisplayedRentWithTax =
+    vacancyFactor > 0 ? breakEvenEffectiveRentWithTax / vacancyFactor : 0;
+  const rentSafetyMarginWithTax =
+    simulatedRent > 0 ? ((simulatedRent - breakEvenDisplayedRentWithTax) / simulatedRent) * 100 : 0;
+
+  const stressVacancyRate = Math.min(30, vacancyRate + 10);
+  const stressEffectiveRent = simulatedRent * (1 - stressVacancyRate / 100);
+  const stressNetSavingsEffortWithTax =
+    totalMonthlyExpenses - stressEffectiveRent - monthlyReduction;
 
   return {
     notaryFees,
@@ -111,5 +125,13 @@ export function calculate(inputs: SimulatorInputs): SimulatorResults {
     grossYield,
     netYield,
     netSavingsEffort,
+    breakEvenEffectiveRentWithoutTax,
+    breakEvenEffectiveRentWithTax,
+    breakEvenDisplayedRentWithoutTax,
+    breakEvenDisplayedRentWithTax,
+    rentSafetyMarginWithTax,
+    stressVacancyRate,
+    stressEffectiveRent,
+    stressNetSavingsEffortWithTax,
   };
 }

@@ -46,6 +46,12 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
     totalMonthlyExpenses,
     grossYield,
     netYield,
+    breakEvenDisplayedRentWithoutTax,
+    breakEvenDisplayedRentWithTax,
+    rentSafetyMarginWithTax,
+    stressVacancyRate,
+    stressEffectiveRent,
+    stressNetSavingsEffortWithTax,
   } = results;
 
   const rentPerSqm = inputs.surface > 0 ? simulatedRent / inputs.surface : 0;
@@ -192,6 +198,36 @@ export default function ResultCard({ results, inputs, marketRent }: Props) {
             formula={`Loyer ${fmt(effectiveRent)} − Charges ${fmt(totalMonthlyExpenses)} + Fiscal ${fmt(monthlyReduction)}`}
           />
         </div>
+
+        {/* Analyse de robustesse */}
+        <Section title="Analyse de robustesse">
+          <Row
+            label="Point mort (hors fiscalité)"
+            value={`${fmt(breakEvenDisplayedRentWithoutTax)} · ${(inputs.surface > 0 ? breakEvenDisplayedRentWithoutTax / inputs.surface : 0).toFixed(1)} €/m²`}
+          />
+          <Row
+            label="Point mort (avec fiscalité)"
+            value={`${fmt(breakEvenDisplayedRentWithTax)} · ${(inputs.surface > 0 ? breakEvenDisplayedRentWithTax / inputs.surface : 0).toFixed(1)} €/m²`}
+            accent
+          />
+          <Row
+            label="Marge de sécurité sur le loyer"
+            value={`${rentSafetyMarginWithTax.toFixed(1)} %`}
+            muted
+          />
+          <Row
+            label={`Stress vacance (${stressVacancyRate} %)`}
+            value={fmt(stressEffectiveRent)}
+          />
+          <Row
+            label="Effort net stressé (avec fiscalité)"
+            value={fmt(stressNetSavingsEffortWithTax)}
+            bold
+          />
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 italic">
+            Stress test: vacance augmentée de +10 points (plafonnée à 30 %) pour visualiser la résilience du projet.
+          </p>
+        </Section>
 
       </div>
     </div>
