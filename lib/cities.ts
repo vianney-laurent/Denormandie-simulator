@@ -1,6 +1,10 @@
-import { City } from './types';
+import { City, Zone } from './types';
 
 // marketRent = loyer moyen marché €/m² (source : CLAMEUR / baromètre SeLoger 2024)
+export const CITY_DATA_SOURCE = 'Base interne (estimations CLAMEUR / SeLoger 2024)';
+export const CITY_DATA_UPDATED_AT = '2026-04-22';
+export const CITY_DATA_OFFICIAL_ZONE_URL = 'https://www.service-public.fr/simulateur/calcul/zonage-abc';
+
 export const CITIES: City[] = [
   // ── Zone A bis ──────────────────────────────────────────────────────────────
   { name: 'Boulogne-Billancourt',     zone: 'A bis', marketRent: 26 },
@@ -156,6 +160,13 @@ export const CITIES: City[] = [
   { name: 'Vienne',                   zone: 'B2',    marketRent:  9 },
   { name: 'Villefranche-sur-Saône',   zone: 'B2',    marketRent:  9 },
 ];
+
+export function countCitiesByZone() {
+  return CITIES.reduce<Record<Zone, number>>((acc, city) => {
+    acc[city.zone] = (acc[city.zone] ?? 0) + 1;
+    return acc;
+  }, { 'A bis': 0, 'A': 0, 'B1': 0, 'B2': 0 });
+}
 
 export function searchCities(query: string): City[] {
   const normalized = query
