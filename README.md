@@ -7,6 +7,7 @@ Interface entièrement front-end, aucune donnée transmise.
 ## Fonctionnalités
 
 - **Recherche de ville** avec détection automatique de la zone locative (A bis / A / B1 / B2)
+- **Aide de couverture villes** : compteur de villes de la base locale + lien vers le simulateur officiel de zonage pour vérification exhaustive
 - **Vérification du seuil travaux** ≥ 25 % du coût total, avec alerte visuelle
 - **Réduction d'impôt** calculée selon la durée d'engagement (6, 9 ou 12 ans)
 - **Plafonds de loyer 2024** par zone avec formule officielle
@@ -14,6 +15,7 @@ Interface entièrement front-end, aucune donnée transmise.
 - **Double cash-flow** :
   - Sans crédit d'impôt — effort mensuel brut (loyer − mensualité)
   - Avec crédit d'impôt — bilan net en lissant la réduction sur le mois
+- **Aide au loyer pertinent** : bouton de loyer prudent (−5 % vs marché local si disponible, sinon 90 % du plafond Denormandie)
 
 ## Stack
 

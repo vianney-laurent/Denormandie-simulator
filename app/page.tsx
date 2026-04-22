@@ -67,6 +67,10 @@ export default function Home() {
   // Loyer mensuel estimé selon les données de marché (pour les marqueurs du slider)
   const marketMonthlyRent =
     typeof marketRent === 'number' ? marketRent * inputs.surface : null;
+  const prudentMonthlyRent =
+    marketMonthlyRent !== null
+      ? Math.min(results.maxMonthlyRent, marketMonthlyRent * 0.95)
+      : results.maxMonthlyRent * 0.9;
 
   function setNum(field: keyof SimulatorInputs, raw: string) {
     const value = parseFloat(raw);
@@ -266,17 +270,45 @@ export default function Home() {
 
                 {/* Référence marché sous le slider */}
                 {typeof marketRent === 'number' && marketMonthlyRent !== null ? (
-                  <p className="text-xs text-blue-500 dark:text-blue-400">
-                    Référence marché : ~{fmt(marketMonthlyRent)}/mois · {marketRent} €/m²
-                  </p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-blue-500 dark:text-blue-400">
+                      Référence marché : ~{fmt(marketMonthlyRent)}/mois · {marketRent} €/m²
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInputs(prev => ({
+                          ...prev,
+                          customRentMonthly: Math.round(prudentMonthlyRent),
+                        }))
+                      }
+                      className="text-xs px-2.5 py-1 rounded-md border border-blue-200 text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400 dark:hover:bg-blue-950/40 transition-colors"
+                    >
+                      Appliquer un loyer prudent (−5 % vs marché)
+                    </button>
+                  </div>
                 ) : marketRent === undefined ? (
                   <p className="text-xs text-slate-400 dark:text-slate-500">
                     Sélectionnez une ville pour afficher le loyer de marché estimé.
                   </p>
                 ) : (
-                  <p className="text-xs text-slate-400 dark:text-slate-500">
-                    Pas de données de marché disponibles pour cette ville.
-                  </p>
+                  <div className="space-y-1.5">
+                    <p className="text-xs text-slate-400 dark:text-slate-500">
+                      Pas de données de marché disponibles pour cette ville.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setInputs(prev => ({
+                          ...prev,
+                          customRentMonthly: Math.round(prudentMonthlyRent),
+                        }))
+                      }
+                      className="text-xs px-2.5 py-1 rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 dark:border-slate-600 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      Appliquer un loyer prudent (90 % du plafond)
+                    </button>
+                  </div>
                 )}
               </div>
             </Card>

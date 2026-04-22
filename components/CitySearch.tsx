@@ -2,7 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Zone, City } from '@/lib/types';
-import { searchCities } from '@/lib/cities';
+import {
+  searchCities,
+  CITIES,
+  countCitiesByZone,
+  CITY_DATA_SOURCE,
+  CITY_DATA_UPDATED_AT,
+  CITY_DATA_OFFICIAL_ZONE_URL,
+} from '@/lib/cities';
 
 const ZONE_BADGE: Record<Zone, string> = {
   'A bis': 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300',
@@ -25,6 +32,7 @@ export default function CitySearch({ zone, onZoneChange, onCitySelect }: Props) 
   const containerRef = useRef<HTMLDivElement>(null);
 
   const results = query.length >= 1 ? searchCities(query) : [];
+  const byZone = countCitiesByZone();
 
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -97,6 +105,11 @@ export default function CitySearch({ zone, onZoneChange, onCitySelect }: Props) 
             ))}
           </ul>
         )}
+        {open && query.length >= 1 && results.length === 0 && (
+          <div className="absolute z-10 w-full mt-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-3 text-xs text-slate-500 dark:text-slate-400">
+            Ville non trouvée dans la base interne. Vérifiez la zone officielle via le lien ci-dessous, puis sélectionnez la zone manuellement.
+          </div>
+        )}
       </div>
 
       {selectedCity && (
@@ -132,6 +145,18 @@ export default function CitySearch({ zone, onZoneChange, onCitySelect }: Props) 
           ))}
         </div>
       </div>
+
+      <p className="text-[11px] leading-relaxed text-slate-400 dark:text-slate-500">
+        Base locale: {CITIES.length} villes (A bis {byZone['A bis']} · A {byZone.A} · B1 {byZone.B1} · B2 {byZone.B2}) — {CITY_DATA_SOURCE}, maj {CITY_DATA_UPDATED_AT}. Pour validation exhaustive d&apos;une commune, utilisez le{' '}
+        <a
+          href={CITY_DATA_OFFICIAL_ZONE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="underline underline-offset-2 hover:text-slate-500 dark:hover:text-slate-300"
+        >
+          simulateur officiel de zonage
+        </a>.
+      </p>
     </div>
   );
 }
